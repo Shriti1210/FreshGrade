@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  users User[]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  roleId    Int
+  name      String
+  email     String   @unique
+  phone     String
+  password  String
+  createdAt DateTime @default(now())
+
+  role       Role        @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  batches    Batch[]     @relation("SellerBatches")
+  orders     Order[]     @relation("CustomerOrders")
+  qaReviews  QAReview[]
+  kycs       KYC[]
+  feedbacks  Feedback[]
+  complaints Complaint[]
+}
+
+model Batch {
+  id          Int      @id @default(autoincrement())
+  sellerId    Int
+  productName String
+  harvestDate DateTime
+  quantity    Int
+  photos      String
+  aiRipeness  Float
+  aiDefects   Float
+  aiGrade     String
+  status      String
+  createdAt   DateTime @default(now())
+
+  seller   User            @relation("SellerBatches", fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product  ProductListing?
+  kyc      KYC?
+  qareview QAReview?
+}
+
+model KYC {
+  id               Int      @id @default(autoincrement())
+  batchId          Int      @unique
+  qaId             Int
+  remarks          String
+  finalGrade       String
+  decision         String
+  digitalSignature String
+  signedAt         DateTime
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qa    User  @relation(fields: [qaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model QAReview {
+  id               Int      @id @default(autoincrement())
+  batchId          Int      @unique
+  qaId             Int
+  remarks          String
+  finalGrade       String
+  decision         String
+  digitalSignature String
+  signedAt         DateTime
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qa    User  @relation(fields: [qaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model ProductListing {
+  id                Int     @id @default(autoincrement())
+  batchId           Int     @unique
+  price             Float
+  availableQuantity Int
+  isLive            Boolean
+
+  batch  Batch   @relation(fields: [batchId], references: [id], onDelete: NoAction)
+  orders Order[]
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  status      String
+  totalAmount Float
+  createdAt   DateTime @default(now())
+
+  customer         User            @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payment          Payment?
+  delivery         Delivery?
+  feedback         Feedback?
+  complaint        Complaint?
+  productListing   ProductListing? @relation(fields: [productListingId], references: [id])
+  productListingId Int?
+}
+
+model Payment {
+  id            Int    @id @default(autoincrement())
+  orderId       Int    @unique
+  amount        Float
+  transactionId String
+  method        String
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction)
+}
+
+model Delivery {
+  id            Int    @id @default(autoincrement())
+  orderId       Int    @unique
+  status        String
+  transactionId String
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction)
+}
+
+model Feedback {
+  id          Int    @id @default(autoincrement())
+  orderId     Int    @unique
+  customerId  Int
+  status      String
+  description String
+
+  order    Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer User  @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Complaint {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @unique
+  customerId  Int
+  description String
+  status      String
+  timestamp   DateTime @default(now())
+
+  order    Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer User  @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
